@@ -23,6 +23,26 @@ void main() {
     expect(journey.totalMinutes, greaterThan(0));
   });
 
+  test('uses the bundled official GMRC fare for a Blue Line journey', () async {
+    final network = await const MultimodalNetworkRepository().load();
+    final journey = const MultimodalRouter().find(
+      network: network,
+      originId: 'thaltej-gam',
+      destinationId: 'vastral-gam',
+      preference: RoutePreference.fastest,
+      allowedModes: const {'Metro'},
+      requiredFirstMode: 'Metro',
+      requiredFinalMode: 'Metro',
+    );
+
+    expect(network.metroFares, hasLength(240));
+    final metroLeg = journey!.legs.singleWhere((leg) => leg.mode == 'Metro');
+    expect(
+      metroLeg.fare,
+      network.metroFares['${metroLeg.fromNodeId}:${metroLeg.toNodeId}'],
+    );
+  });
+
   test('uses an AMTS or BRTS leg for an off-corridor destination', () async {
     final network = await const MultimodalNetworkRepository().load();
     final journey = const MultimodalRouter().find(

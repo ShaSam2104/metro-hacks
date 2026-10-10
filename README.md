@@ -92,11 +92,10 @@ search usable in airplane mode. Route geometry, fares, and uncovered service
 timing remain prototype estimates and are labelled as such.
 
 For fares, the supplied data includes GMRC's official 1,378-pair Metro token
-fare matrix. The compact offline graph currently bundles only the Blue Line,
-so Metro remains a conservative distance-band estimate until the full
-station-to-station matrix is integrated. No official AMTS/BRTS fare chart was
-available in the supplied data; their fallback is transparently shown as Rs
-2/km, with a Rs 5 minimum and Rs 30 cap.
+fare matrix. The app bundles the 272 directed entries matching its Blue Line
+stations, so a Blue Line journey uses its exact token OD fare offline. No
+official AMTS/BRTS fare chart was available in the supplied data; their
+fallback is transparently shown as Rs 2/km, with a Rs 5 minimum and Rs 30 cap.
 
 The implemented passenger experience is documented in
 [`docs/journey-card-spec.md`](docs/journey-card-spec.md).

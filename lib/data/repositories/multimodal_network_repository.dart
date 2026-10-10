@@ -52,6 +52,10 @@ class MultimodalNetworkRepository {
         minutes: edge['minutes'] as int,
       );
     }).toList();
+    final metroFares = <String, int>{
+      for (final entry in ((decoded['metroFares'] as Map?) ?? const {}).entries)
+        entry.key as String: (entry.value as num).toInt(),
+    };
     final modesByNode = <String, Set<String>>{};
     for (final edge in edges) {
       if (edge.mode == 'Walk') continue;
@@ -92,6 +96,7 @@ class MultimodalNetworkRepository {
       nodes: nodes,
       routes: routes,
       edges: edges,
+      metroFares: metroFares,
     );
   }
 }

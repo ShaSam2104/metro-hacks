@@ -18,6 +18,8 @@ class RouteLeg {
     required this.to,
     required this.minutes,
     required this.points,
+    this.fromNodeId,
+    this.toNodeId,
     this.fare = 0,
   });
   final String mode;
@@ -26,6 +28,8 @@ class RouteLeg {
   final String to;
   final int minutes;
   final List<GeoPoint> points;
+  final String? fromNodeId;
+  final String? toNodeId;
   final int fare;
   bool get isWalking => mode == 'Walk';
 
@@ -34,6 +38,8 @@ class RouteLeg {
     String? to,
     int? minutes,
     List<GeoPoint>? points,
+    String? fromNodeId,
+    String? toNodeId,
     int? fare,
   }) => RouteLeg(
     mode: mode,
@@ -42,6 +48,8 @@ class RouteLeg {
     to: to ?? this.to,
     minutes: minutes ?? this.minutes,
     points: points ?? this.points,
+    fromNodeId: fromNodeId ?? this.fromNodeId,
+    toNodeId: toNodeId ?? this.toNodeId,
     fare: fare ?? this.fare,
   );
 }
@@ -234,6 +242,7 @@ class MultimodalRouter {
       cursor = records[cursor.previousKey]!;
     }
     final legs = _priceLegs(
+      network,
       _toLegs(
         network,
         traversal.reversed.toList(),
@@ -342,6 +351,7 @@ class MultimodalRouter {
           to: first.name,
           minutes: initialWalk,
           points: [origin.point, first.point],
+          toNodeId: path.first.fromId,
         ),
       );
     }
@@ -359,6 +369,7 @@ class MultimodalRouter {
           to: to.name,
           minutes: last.minutes + traversal.edge.minutes,
           points: [...last.points, to.point],
+          toNodeId: traversal.toId,
         );
       } else {
         legs.add(
@@ -369,6 +380,8 @@ class MultimodalRouter {
             to: to.name,
             minutes: traversal.edge.minutes,
             points: [from.point, to.point],
+            fromNodeId: traversal.fromId,
+            toNodeId: traversal.toId,
           ),
         );
       }
@@ -383,24 +396,36 @@ class MultimodalRouter {
           to: destination.name,
           minutes: finalWalk,
           points: [last.point, destination.point],
+          fromNodeId: path.last.toId,
         ),
       );
     }
     return legs;
   }
 
-  List<RouteLeg> _priceLegs(List<RouteLeg> legs) => legs
-      .map(
-        (leg) => leg.isWalking
-            ? leg
-            : leg.copyWith(
-                fare: _fareForDistance(
-                  leg.mode,
-                  _legDistanceMeters(leg.points),
-                ),
-              ),
-      )
-      .toList();
+  List<RouteLeg> _priceLegs(MultimodalNetwork network, List<RouteLeg> legs) =>
+      legs
+          .map(
+            (leg) => leg.isWalking
+                ? leg
+                : leg.copyWith(
+                    fare: _fareForDistance(
+                      leg.mode,
+                      _legDistanceMeters(leg.points),
+                      metroFare: _officialMetroFare(network, leg),
+                    ),
+                  ),
+          )
+          .toList();
+}
+
+int? _officialMetroFare(MultimodalNetwork network, RouteLeg leg) {
+  final fromNodeId = leg.fromNodeId;
+  final toNodeId = leg.toNodeId;
+  if (leg.mode != 'Metro' || fromNodeId == null || toNodeId == null) {
+    return null;
+  }
+  return network.metroFares['$fromNodeId:$toNodeId'];
 }
 
 int _walkingMinutes(double meters) => (meters / 75).ceil().clamp(1, 60);
@@ -431,14 +456,14 @@ double _legDistanceMeters(List<GeoPoint> points) {
   return total;
 }
 
-/// Metro currently uses a conservative offline band. The supplied data pack
-/// contains the official GMRC OD matrix, which should replace that band when
-/// the full operational station graph is bundled. AMTS/BRTS have no official
-/// machine-readable fare chart in the supplied data, so they use a transparent
-/// Rs 2/km fallback with a Rs 5 minimum and Rs 30 cap.
-int _fareForDistance(String mode, double distanceMeters) {
+/// Metro uses the bundled GMRC token OD matrix when an exact station pair is
+/// present. AMTS/BRTS have no official machine-readable fare chart in the
+/// supplied data, so they use a transparent Rs 2/km fallback with a Rs 5
+/// minimum and Rs 30 cap.
+int _fareForDistance(String mode, double distanceMeters, {int? metroFare}) {
   final kilometers = distanceMeters / 1000;
   return switch (mode) {
+    'Metro' when metroFare != null => metroFare,
     'Metro' when kilometers <= 2 => 5,
     'Metro' when kilometers <= 5 => 10,
     'Metro' when kilometers <= 12 => 15,

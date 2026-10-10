@@ -74,7 +74,7 @@ class JourneyCardViewModel extends ChangeNotifier {
   String get arrivalTime => formatClockMinutes(_arrivalMinutes);
   String get departureTime => arrivalTime;
 
-  // Prototype distance bands until operators expose machine-readable fare data.
+  // Exact Metro fares use the bundled GMRC Blue Line OD matrix; bus fares are fallback estimates.
   List<RouteLeg> get fareLegs =>
       _routedJourney?.legs.where((leg) => leg.fare > 0).toList() ?? const [];
   int get metroFareEstimate => fareLegs

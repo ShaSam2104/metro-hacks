@@ -73,12 +73,14 @@ class MultimodalNetwork {
     required this.nodes,
     required this.routes,
     required List<TransitEdge> edges,
+    this.metroFares = const {},
   }) : _edgesByNode = _indexEdges(edges),
        _spatialIndex = _indexNodes(nodes.values);
 
   final List<RoutingPlace> places;
   final Map<String, TransitNode> nodes;
   final Map<String, TransitRoute> routes;
+  final Map<String, int> metroFares;
   final Map<String, List<TransitEdge>> _edgesByNode;
   final Map<String, List<TransitNode>> _spatialIndex;
 

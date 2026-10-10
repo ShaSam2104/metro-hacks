@@ -46,9 +46,7 @@ class _JourneyFareCardState extends State<JourneyFareCard> {
     final viewModel = widget.viewModel;
     return ShadCard(
       title: Text('Ticket-ready journey card', style: theme.textTheme.h4),
-      description: const Text(
-        'Distance-band fare estimate for the selected offline route.',
-      ),
+      description: const Text('Offline fare estimate for the selected route.'),
       child: Column(
         children: [
           ...viewModel.fareLegs.expand(
@@ -73,7 +71,7 @@ class _JourneyFareCardState extends State<JourneyFareCard> {
           ),
           const SizedBox(height: 6),
           Text(
-            'AMTS/BRTS fallback: Rs 2/km, Rs 5 minimum, Rs 30 cap. Metro is a distance-band estimate until the official OD matrix is bundled.',
+            'Metro Blue Line uses the bundled GMRC token OD matrix. AMTS/BRTS fallback: Rs 2/km, Rs 5 minimum, Rs 30 cap.',
             style: theme.textTheme.muted,
           ),
           const SizedBox(height: 14),

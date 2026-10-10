@@ -61,6 +61,7 @@ def haversine_meters(first: dict, second: dict) -> float:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('--gtfs', required=True, type=Path)
+    parser.add_argument('--metro-fares', type=Path)
     parser.add_argument('--output', required=True, type=Path)
     arguments = parser.parse_args()
     gtfs = arguments.gtfs
@@ -131,6 +132,27 @@ def main() -> None:
             'longitude': longitude,
             'operator': 'Metro',
         }
+    metro_fares = {}
+    if arguments.metro_fares is not None:
+        metro_node_ids = {
+            name: f'metro-blue-{index}' for index, (name, _, _) in enumerate(BLUE_LINE)
+        }
+        # The supplied GMRC source names this Blue Line station "SP Stadium".
+        metro_name_aliases = {'SP Stadium': 'Stadium'}
+        with arguments.metro_fares.open(newline='', encoding='utf-8') as source:
+            for row in csv.DictReader(source):
+                from_name = metro_name_aliases.get(row['from_station'], row['from_station'])
+                to_name = metro_name_aliases.get(row['to_station'], row['to_station'])
+                from_id = metro_node_ids.get(from_name)
+                to_id = metro_node_ids.get(to_name)
+                if from_id is None or to_id is None:
+                    continue
+                try:
+                    fare = int(row['fare_inr_token'])
+                except ValueError:
+                    continue
+                metro_fares[f'{from_id}:{to_id}'] = fare
+                metro_fares[f'{to_id}:{from_id}'] = fare
     output_edges = [
         {'from': first, 'to': second, 'routeId': route_id, 'mode': routes[route_id]['operator'], 'minutes': minutes}
         for (first, second, route_id), minutes in edges.items()
@@ -148,6 +170,7 @@ def main() -> None:
         'nodes': list(nodes.values()),
         'routes': routes,
         'edges': output_edges,
+        'metroFares': metro_fares,
     }
     arguments.output.parent.mkdir(parents=True, exist_ok=True)
     arguments.output.write_text(json.dumps(output, separators=(',', ':')), encoding='utf-8')
