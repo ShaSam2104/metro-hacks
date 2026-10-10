@@ -1,0 +1,14 @@
+services:
+  api:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      METROLINK_DATABASE_PATH: /data/metrolink.db
+    volumes:
+      - metrolink_data:/data
+    ports:
+      - '127.0.0.1:8001:8000'
+
+volumes:
+  metrolink_data:

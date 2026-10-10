@@ -1,0 +1,32 @@
+{
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "functions": [
+    {
+      "source": "functions-python",
+      "codebase": "tokenIssuer",
+      "runtime": "python312"
+    }
+  ],
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "metro-hacks-shasam-2026",
+          "appId": "1:159613793250:android:a7ece10bb8791d82bc3fbb",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "metro-hacks-shasam-2026",
+          "configurations": {
+            "android": "1:159613793250:android:a7ece10bb8791d82bc3fbb",
+            "web": "1:159613793250:web:9891f1689ecb46c6bc3fbb"
+          }
+        }
+      }
+    }
+  }
+}

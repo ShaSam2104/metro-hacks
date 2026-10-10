@@ -1,0 +1,14 @@
+{
+  auto_https disable_redirects
+}
+
+https://api.92.4.65.123.sslip.io {
+  reverse_proxy 127.0.0.1:8001
+}
+
+https://app.92.4.65.123.sslip.io {
+  root * /usr/share/caddy
+  try_files {path} /index.html
+  file_server
+  encode zstd gzip
+}
