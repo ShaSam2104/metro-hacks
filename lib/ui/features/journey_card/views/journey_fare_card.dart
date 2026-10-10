@@ -47,21 +47,19 @@ class _JourneyFareCardState extends State<JourneyFareCard> {
     return ShadCard(
       title: Text('Ticket-ready journey card', style: theme.textTheme.h4),
       description: const Text(
-        'Combined-fare estimate for the selected offline route.',
+        'Distance-band fare estimate for the selected offline route.',
       ),
       child: Column(
         children: [
-          if (viewModel.metroFareEstimate > 0) ...[
-            _FareRow(label: 'Metro leg', amount: viewModel.metroFareEstimate),
-            const SizedBox(height: 10),
-          ],
-          if (viewModel.onwardFareEstimate > 0) ...[
-            _FareRow(
-              label: '${viewModel.onwardOperator} onward leg',
-              amount: viewModel.onwardFareEstimate,
-            ),
-            const SizedBox(height: 10),
-          ],
+          ...viewModel.fareLegs.expand(
+            (leg) => [
+              _FareRow(
+                label: '${leg.mode} ${leg.route?.shortName ?? 'leg'}',
+                amount: leg.fare,
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
           const Divider(height: 24),
           _FareRow(
             label: 'One passenger total',
@@ -72,6 +70,11 @@ class _JourneyFareCardState extends State<JourneyFareCard> {
           Text(
             '${viewModel.estimatedTotalMinutes} min total · ${viewModel.totalWalkingMinutes} min walking · ${viewModel.routeTransfers} interchange${viewModel.routeTransfers == 1 ? '' : 's'}',
             style: theme.textTheme.small,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'AMTS/BRTS fallback: Rs 2/km, Rs 5 minimum, Rs 30 cap. Metro is a distance-band estimate until the official OD matrix is bundled.',
+            style: theme.textTheme.muted,
           ),
           const SizedBox(height: 14),
           const SizedBox(height: 6),

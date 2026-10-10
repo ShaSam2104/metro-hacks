@@ -74,15 +74,13 @@ class JourneyCardViewModel extends ChangeNotifier {
   String get arrivalTime => formatClockMinutes(_arrivalMinutes);
   String get departureTime => arrivalTime;
 
-  // Prototype fare bands until operators expose machine-readable fare data.
-  int get metroFareEstimate =>
-      _routedJourney?.legs.any((leg) => leg.mode == 'Metro') ?? false ? 15 : 0;
-  int get onwardFareEstimate => _routedJourney == null
-      ? 10
-      : (_routedJourney!.estimatedFare - metroFareEstimate).clamp(0, 999);
-  int get totalFareEstimate =>
-      _routedJourney?.estimatedFare ?? metroFareEstimate + onwardFareEstimate;
-  String get onwardOperator => selectedRoute?.agency ?? 'AMTS';
+  // Prototype distance bands until operators expose machine-readable fare data.
+  List<RouteLeg> get fareLegs =>
+      _routedJourney?.legs.where((leg) => leg.fare > 0).toList() ?? const [];
+  int get metroFareEstimate => fareLegs
+      .where((leg) => leg.mode == 'Metro')
+      .fold(0, (total, leg) => total + leg.fare);
+  int get totalFareEstimate => _routedJourney?.estimatedFare ?? 0;
   String get originId => _originId;
   String get destinationId => _destinationId;
   String get preference => _preference;

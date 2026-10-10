@@ -142,4 +142,62 @@ void main() {
     expect(journey, isNotNull);
     expect(journey!.scheduledWaitMinutes, 9);
   });
+
+  test('charges a higher distance band for a longer transit leg', () {
+    const origin = RoutingPlace(
+      id: 'origin',
+      name: 'Origin',
+      point: GeoPoint(23.0, 72.0),
+    );
+    const destination = RoutingPlace(
+      id: 'destination',
+      name: 'Destination',
+      point: GeoPoint(23.2, 72.0),
+    );
+    final network = MultimodalNetwork(
+      places: const [origin, destination],
+      nodes: const {
+        'a': TransitNode(
+          id: 'a',
+          name: 'Start stop',
+          point: GeoPoint(23.0, 72.0),
+          operatorName: 'AMTS',
+        ),
+        'b': TransitNode(
+          id: 'b',
+          name: 'End stop',
+          point: GeoPoint(23.2, 72.0),
+          operatorName: 'AMTS',
+        ),
+      },
+      routes: const {
+        'r1': TransitRoute(
+          id: 'r1',
+          operatorName: 'AMTS',
+          shortName: '1',
+          longName: 'Test route',
+        ),
+      },
+      edges: const [
+        TransitEdge(
+          fromId: 'a',
+          toId: 'b',
+          routeId: 'r1',
+          mode: 'AMTS',
+          minutes: 30,
+        ),
+      ],
+    );
+
+    final journey = const MultimodalRouter().find(
+      network: network,
+      originId: 'origin',
+      destinationId: 'destination',
+      preference: RoutePreference.fastest,
+    );
+
+    expect(journey, isNotNull);
+    expect(journey!.estimatedFare, 30);
+    expect(journey.legs.singleWhere((leg) => leg.mode == 'AMTS').fare, 30);
+  });
 }

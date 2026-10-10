@@ -18,6 +18,7 @@ class RouteLeg {
     required this.to,
     required this.minutes,
     required this.points,
+    this.fare = 0,
   });
   final String mode;
   final TransitRoute? route;
@@ -25,7 +26,24 @@ class RouteLeg {
   final String to;
   final int minutes;
   final List<GeoPoint> points;
+  final int fare;
   bool get isWalking => mode == 'Walk';
+
+  RouteLeg copyWith({
+    String? from,
+    String? to,
+    int? minutes,
+    List<GeoPoint>? points,
+    int? fare,
+  }) => RouteLeg(
+    mode: mode,
+    route: route,
+    from: from ?? this.from,
+    to: to ?? this.to,
+    minutes: minutes ?? this.minutes,
+    points: points ?? this.points,
+    fare: fare ?? this.fare,
+  );
 }
 
 class RoutedJourney {
@@ -215,20 +233,22 @@ class MultimodalRouter {
       );
       cursor = records[cursor.previousKey]!;
     }
-    final legs = _toLegs(
-      network,
-      traversal.reversed.toList(),
-      origin,
-      destination,
-      best.initialWalkMinutes,
-      bestFinishWalk,
+    final legs = _priceLegs(
+      _toLegs(
+        network,
+        traversal.reversed.toList(),
+        origin,
+        destination,
+        best.initialWalkMinutes,
+        bestFinishWalk,
+      ),
     );
     return RoutedJourney(
       legs: legs,
       totalMinutes: best.actualMinutes,
       walkingMinutes: best.walkingMinutes,
       transfers: best.transfers,
-      estimatedFare: best.fare,
+      estimatedFare: legs.fold(0, (total, leg) => total + leg.fare),
       scheduledWaitMinutes: best.scheduledWaitMinutes,
     );
   }
@@ -335,10 +355,7 @@ class MultimodalRouter {
       if (last != null &&
           last.mode == traversal.edge.mode &&
           last.route?.id == route?.id) {
-        legs[legs.length - 1] = RouteLeg(
-          mode: last.mode,
-          route: last.route,
-          from: last.from,
+        legs[legs.length - 1] = last.copyWith(
           to: to.name,
           minutes: last.minutes + traversal.edge.minutes,
           points: [...last.points, to.point],
@@ -371,6 +388,19 @@ class MultimodalRouter {
     }
     return legs;
   }
+
+  List<RouteLeg> _priceLegs(List<RouteLeg> legs) => legs
+      .map(
+        (leg) => leg.isWalking
+            ? leg
+            : leg.copyWith(
+                fare: _fareForDistance(
+                  leg.mode,
+                  _legDistanceMeters(leg.points),
+                ),
+              ),
+      )
+      .toList();
 }
 
 int _walkingMinutes(double meters) => (meters / 75).ceil().clamp(1, 60);
@@ -388,10 +418,43 @@ int _fareForBoarding(String? previousRoute, String nextRoute, String mode) =>
     previousRoute == nextRoute
     ? 0
     : switch (mode) {
-        'Metro' => 15,
-        'BRTS' || 'AMTS' => 10,
+        'Metro' => 5,
+        'BRTS' || 'AMTS' => 5,
         _ => 0,
       };
+double _legDistanceMeters(List<GeoPoint> points) {
+  if (points.length < 2) return 0;
+  var total = 0.0;
+  for (var index = 1; index < points.length; index++) {
+    total += distanceMeters(points[index - 1], points[index]);
+  }
+  return total;
+}
+
+/// Metro currently uses a conservative offline band. The supplied data pack
+/// contains the official GMRC OD matrix, which should replace that band when
+/// the full operational station graph is bundled. AMTS/BRTS have no official
+/// machine-readable fare chart in the supplied data, so they use a transparent
+/// Rs 2/km fallback with a Rs 5 minimum and Rs 30 cap.
+int _fareForDistance(String mode, double distanceMeters) {
+  final kilometers = distanceMeters / 1000;
+  return switch (mode) {
+    'Metro' when kilometers <= 2 => 5,
+    'Metro' when kilometers <= 5 => 10,
+    'Metro' when kilometers <= 12 => 15,
+    'Metro' => 20,
+    'AMTS' || 'BRTS' => _busFallbackFare(kilometers),
+    _ => 0,
+  };
+}
+
+int _busFallbackFare(double kilometers) {
+  final rawFare = (kilometers * 2).ceil();
+  if (rawFare < 5) return 5;
+  if (rawFare > 30) return 30;
+  return rawFare;
+}
+
 int _score(
   RoutePreference preference, {
   required int actualMinutes,
