@@ -1,14 +1,24 @@
+import 'dart:typed_data';
+
 import 'package:barcode/barcode.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 
 import '../repositories/ticket_repository.dart';
+import 'ticket_pdf_downloader.dart';
 
 class TicketPdfService {
   const TicketPdfService();
 
   Future<void> download(TicketOrder order) async {
+    final bytes = await build(order);
+    await downloadTicketPdf(
+      bytes,
+      'metrolink-pass-${order.id.substring(0, 8)}.pdf',
+    );
+  }
+
+  Future<Uint8List> build(TicketOrder order) async {
     final document = pw.Document();
     final verificationPayload =
         'metrolink-demo://ticket/${order.id}?status=${order.status}&fare=${order.fareAmount}';
@@ -65,9 +75,6 @@ class TicketPdfService {
         ),
       ),
     );
-    await Printing.sharePdf(
-      bytes: await document.save(),
-      filename: 'metrolink-pass-${order.id.substring(0, 8)}.pdf',
-    );
+    return document.save();
   }
 }
